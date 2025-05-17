@@ -1,1 +1,476 @@
+:root {
+  --primary-light: #f8fafc;
+  --secondary-light: #ffffff;
+  --text-light: #1e293b;
+  --primary-dark: #0f172a;
+  --secondary-dark: #1e293b;
+  --text-dark: #f8fafc;
+  --accent: #8b5cf6;
+  --accent-light: #a78bfa;
+  --accent-dark: #7c3aed;
+  --success: #10b981;
+  --error: #ef4444;
+  --warning: #f59e0b;
+}
 
+.dark {
+  --primary: var(--primary-dark);
+  --secondary: var(--secondary-dark);
+  --text: var(--text-dark);
+}
+
+.light {
+  --primary: var(--primary-light);
+  --secondary: var(--secondary-light);
+  --text: var(--text-light);
+}
+
+body {
+  background-color: var(--primary);
+  color: var(--text);
+  font-family: "Inter", sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.card {
+  border-radius: 16px;
+  background-color: var(--secondary);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.card:hover {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.btn {
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  font-weight: 500;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-accent {
+  background-color: var(--accent);
+  color: white;
+}
+
+.btn-accent:hover {
+  background-color: var(--accent-light);
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 100;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(5px);
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  border-radius: 24px;
+  background-color: var(--secondary);
+  animation: slideUp 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.recipe-image {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 16px 16px 0 0;
+}
+
+.scroll-container {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) var(--secondary);
+}
+
+.scroll-container::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scroll-container::-webkit-scrollbar-track {
+  background: var(--secondary);
+  border-radius: 10px;
+}
+
+.scroll-container::-webkit-scrollbar-thumb {
+  background-color: var(--accent);
+  border-radius: 10px;
+}
+
+.tab-active {
+  position: relative;
+  color: var(--accent);
+}
+
+.tab-active::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 3px;
+  background-color: var(--accent);
+  border-radius: 3px;
+}
+
+.hidden {
+  display: none;
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease;
+}
+
+.slide-up {
+  animation: slideUp 0.3s ease;
+}
+
+.bounce {
+  animation: bounce 0.5s;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-effect {
+  position: absolute;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.4);
+  transform: scale(0);
+  animation: ripple 0.6s linear;
+  pointer-events: none;
+}
+
+@keyframes ripple {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+.floating-btn {
+  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
+}
+
+.floating-btn:active {
+  transform: scale(0.95);
+}
+
+.input-field {
+  transition: all 0.3s ease;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.input-field:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+}
+
+.ingredient-item,
+.step-item {
+  transition: all 0.3s ease;
+}
+
+.ingredient-item:hover,
+.step-item:hover {
+  transform: translateX(5px);
+}
+
+.empty-state {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.8;
+  }
+}
+
+.notification {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  border-radius: 12px;
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  animation: slideUp 0.3s ease;
+}
+
+.notification.success {
+  background-color: var(--success);
+}
+
+.notification.error {
+  background-color: var(--error);
+}
+
+.notification.warning {
+  background-color: var(--warning);
+}
+
+.notification.info {
+  background-color: var(--accent);
+}
+
+.notification i {
+  margin-right: 8px;
+}
+
+.bottom-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: var(--secondary);
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.1);
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  z-index: 50;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.bottom-sheet.active {
+  transform: translateY(0);
+}
+
+.bottom-sheet-handle {
+  width: 40px;
+  height: 5px;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 5px;
+  margin: 12px auto;
+}
+
+.settings-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 320px;
+  height: 100vh;
+  background-color: var(--secondary);
+  box-shadow: -5px 0 20px rgba(0, 0, 0, 0.1);
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  z-index: 50;
+  overflow-y: auto;
+}
+
+.settings-panel.active {
+  transform: translateX(0);
+}
+
+.modern-header {
+  background-color: var(--secondary);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+@media (max-width: 640px) {
+  .recipe-image {
+    height: 160px;
+  }
+
+  .modal-content {
+    width: 90%;
+    margin: 20px auto;
+  }
+
+  .bottom-sheet,
+  .settings-panel {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .settings-panel {
+    width: 100%;
+  }
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.recipe-card-mobile {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  gap: 16px;
+  border-radius: 16px;
+  margin-bottom: 12px;
+}
+
+.recipe-card-mobile img {
+  width: 80px;
+  height: 80px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.recipe-card-mobile-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.recipe-card-mobile-title {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.recipe-card-mobile-desc {
+  font-size: 14px;
+  color: var(--text);
+  opacity: 0.7;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.recipe-card-mobile-meta {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.6;
+}
+
+.recipe-card-mobile-meta i {
+  margin-right: 4px;
+}
+
+.modern-input {
+  background-color: var(--secondary);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  border-radius: 12px;
+  padding: 14px;
+  width: 100%;
+}
+
+.modern-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.transition-smooth {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.empty-state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  text-align: center;
+  padding: 20px;
+}
+
+.empty-state-icon {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.empty-state-icon i {
+  font-size: 40px;
+  color: white;
+}
+
+.empty-state-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.empty-state-subtitle {
+  font-size: 14px;
+  color: var(--text);
+  opacity: 0.7;
+  margin-bottom: 20px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: var(--accent);
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
