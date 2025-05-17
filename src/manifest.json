@@ -1,0 +1,23 @@
+{
+  "name": "Tariflerim",
+  "short_name": "Tariflerim",
+  "start_url": "https://xmeroriginals.github.io/myrecipes/",
+  "scope": "https://xmeroriginals.github.io/myrecipes/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0284c7",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/myrecipes/assets/192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/myrecipes/assets/512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "orientation": "any"
+}
