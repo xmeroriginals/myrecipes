@@ -211,11 +211,6 @@ function renderRecipes() {
                         <div class="recipe-card-mobile-meta">
                             <span><i class="fas fa-list-ul"></i> ${recipe.ingredients.length
             } malzeme</span>
-                            <span class="mx-2">•</span>
-                            <span><i class="fas fa-clock"></i> ${Math.max(
-                15,
-                Math.min(recipe.ingredients.length, 120)
-            )} dk</span>
                         </div>
                     </div>
                 `;
