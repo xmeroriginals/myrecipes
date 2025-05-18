@@ -1,2 +1,2 @@
-# My Recipes [Soon 🚧]
+# My Recipes
 Manage your recipes.
