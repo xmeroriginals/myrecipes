@@ -537,7 +537,7 @@ function exportRecipes() {
 
     const a = document.createElement("a");
     a.href = url;
-    a.download = "Modern-Tarifler-yedek.json";
+    a.download = "tariflerim-yedek.json";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
