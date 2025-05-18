@@ -8,11 +8,10 @@ const themeSelector = document.getElementById("theme-selector");
 const searchContainer = document.getElementById("search-container");
 const searchInput = document.getElementById("search-input");
 const clearSearch = document.getElementById("clear-search");
-const settingsPanel = document.getElementById("settings-panel");
+const panelMenu = document.getElementById("settings-panel");
 const openMenuBtn = document.getElementById("open-menu-btn");
 const sortOptions = document.getElementById("sort-options");
 const sortSelect = document.getElementById("sort-select");
-
 const menuBtn = document.getElementById("menu-btn");
 const searchBtn = document.getElementById("search-btn");
 const sortBtn = document.getElementById("sort-btn");
@@ -32,12 +31,15 @@ const resetAllBtn = document.getElementById("reset-all-btn");
 const exportDataBtn = document.getElementById("export-data-btn");
 const importDataBtn = document.getElementById("import-data-btn");
 const menuAddRecipe = document.getElementById("menu-add-recipe");
-
 const confirmModal = document.getElementById("confirm-modal");
 const confirmTitle = document.getElementById("confirm-title");
 const confirmMessage = document.getElementById("confirm-message");
 const confirmCancel = document.getElementById("confirm-cancel");
 const confirmOk = document.getElementById("confirm-ok");
+const emptyStateTitle = document.querySelector("#empty-state .empty-state-title");
+const emptyStateSubtitle = document.querySelector("#empty-state .empty-state-subtitle");
+const openMenuBtnEmptyState = document.getElementById("open-menu-btn");
+const emptyStateIcon = document.querySelector("#empty-state .empty-state-icon i");
 
 let recipes = [];
 let currentRecipeId = null;
@@ -122,6 +124,13 @@ async function loadRecipesFromDB() {
         return;
     }
 
+    emptyStateTitle.textContent = "Tarifleriniz Yolda, Lütfen Bekleyiniz...";
+    emptyStateSubtitle.textContent = "";
+    openMenuBtnEmptyState.classList.add("hidden");
+    emptyStateIcon.classList.remove("fa-book-open");
+    emptyStateIcon.classList.add("fas", "fa-spinner", "fa-spin");
+    emptyState.classList.remove("hidden");
+
     const tx = db.transaction(RECIPE_STORE_NAME, "readonly");
     const store = tx.objectStore(RECIPE_STORE_NAME);
     const request = store.get("recipes");
@@ -144,13 +153,14 @@ async function loadRecipesFromDB() {
             recipes = [];
             renderRecipes();
         }
-        updateEmptyState();
+        resetEmptyState();
     };
 
     request.onerror = (event) => {
         showNotification("Tarifler yüklenirken hata oluştu", "error");
         recipes = [];
         renderRecipes();
+        resetEmptyState();
     };
 }
 
@@ -271,7 +281,7 @@ function renderRecipes() {
         recipeCard.classList.add("fade-in");
 
         recipeCard.innerHTML = `
-                                <img src="${recipe.image ||
+                                <img draggable="false" src="${recipe.image ||
             "https://xmeroriginals.github.io/myrecipes/assets/nopic.png"
             }"
                                      alt="${recipe.name}">
@@ -293,6 +303,7 @@ function renderRecipes() {
 }
 
 function viewRecipe(id) {
+    panelMenu.classList.remove("active");
     const recipe = recipes.find((r) => r.id === id);
     if (!recipe) return;
 
@@ -301,8 +312,12 @@ function viewRecipe(id) {
     document.getElementById("detail-recipe-name").textContent = recipe.name;
     document.getElementById("detail-recipe-description").textContent =
         recipe.description || "";
-    document.getElementById("detail-recipe-image").src =
-        recipe.image || "https://xmeroriginals.github.io/myrecipes/assets/nopic.png";
+    const imageElement = document.getElementById("detail-recipe-image");
+    imageElement.src = recipe.image || "https://xmeroriginals.github.io/myrecipes/assets/nopic.png";
+    imageElement.draggable = false;
+    imageElement.style.objectFit = "cover";
+    imageElement.style.borderRadius = "16px";
+
 
     const ingredientsList = document.getElementById("detail-ingredients-list");
     ingredientsList.innerHTML = "";
@@ -608,7 +623,7 @@ function backToList() {
     recipesView.classList.remove("hidden");
     editRecipeView.classList.add("hidden");
     recipeDetailView.classList.add("hidden");
-    settingsPanel.classList.remove("active");
+    panelMenu.classList.remove("active");
 
     searchContainer.classList.add("hidden");
     currentSearchQuery = "";
@@ -643,13 +658,13 @@ function applyTheme(theme) {
     localStorage.setItem("theme", theme);
 }
 
-function toggleSettingsPanel() {
-    settingsPanel.classList.toggle("active");
+function togglepanelMenu() {
+    panelMenu.classList.toggle("active");
 }
 
 function setupEventListeners() {
-    menuBtn.addEventListener("click", toggleSettingsPanel);
-    openMenuBtn.addEventListener("click", toggleSettingsPanel);
+    menuBtn.addEventListener("click", togglepanelMenu);
+    openMenuBtn.addEventListener("click", togglepanelMenu);
 
     searchBtn.addEventListener("click", () => {
         sortOptions.classList.add("hidden");
@@ -669,11 +684,11 @@ function setupEventListeners() {
         renderRecipes();
     });
 
-    closeSettingsBtn.addEventListener("click", toggleSettingsPanel);
+    closeSettingsBtn.addEventListener("click", togglepanelMenu);
     menuAddRecipe.addEventListener("click", () => {
         backToList();
         showEditForm();
-        settingsPanel.classList.remove("active");
+        panelMenu.classList.remove("active");
     });
 
     clearSearch.addEventListener("click", () => {
@@ -695,14 +710,27 @@ function setupEventListeners() {
 
     document
         .getElementById("recipe-image")
-        .addEventListener("change", (e) => {
+        .addEventListener("change", async (e) => {
             const file = e.target.files[0];
             if (file) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    document.getElementById("recipe-preview").src = event.target.result;
-                };
-                reader.readAsDataURL(file);
+                try {
+                    const base64Image = await convertImageToWebp(file);
+                    document.getElementById("recipe-preview").src = base64Image;
+                    const recipeId = document.getElementById("recipe-id").value || Date.now().toString();
+                    recipes = recipes.map(recipe => {
+                        if (recipe.id === recipeId) {
+                            return { ...recipe, image: base64Image };
+                        }
+                        return recipe;
+                    });
+
+                } catch (error) {
+                    console.error("Resim dönüştürme hatası:", error);
+                    showNotification(
+                        "Resim dönüştürülürken bir hata oluştu. Lütfen farklı bir resim deneyin.",
+                        "error"
+                    );
+                }
             }
         });
 
@@ -748,8 +776,8 @@ function setupEventListeners() {
         if (e.target === confirmModal) {
             confirmModal.style.display = "none";
         }
-        if (e.target === settingsPanel) {
-            settingsPanel.classList.remove("active");
+        if (e.target === panelMenu) {
+            panelMenu.classList.remove("active");
         }
     });
 
@@ -783,21 +811,6 @@ function setupEventListeners() {
             showNotification("Tarif bulunamadı", "error");
         }
     });
-}
-
-function getSortMethodName(method) {
-    switch (method) {
-        case "name-asc":
-            return "isme göre (A-Z)";
-        case "name-desc":
-            return "isme göre (Z-A)";
-        case "date-new":
-            return "tarihe göre (yeniden eskiye)";
-        case "date-old":
-            return "tarihe göre (eskiden yeniye)";
-        default:
-            return "";
-    }
 }
 
 function showConfirmation(title, message, callback) {
@@ -850,4 +863,56 @@ async function copyToClipboard(text) {
     } catch (error) {
         showNotification("Tarif kopyalanamadı", "error");
     }
+}
+
+function resetEmptyState() {
+    emptyStateTitle.textContent = "Henüz tarif yok";
+    emptyStateSubtitle.textContent = "Menüyü açarak yeni tarif ekleyebilirsiniz";
+    openMenuBtnEmptyState.classList.remove("hidden");
+    emptyStateIcon.classList.remove("fas", "fa-spinner", "fa-spin");
+    emptyStateIcon.classList.add("fa-book-open");
+    updateEmptyState();
+}
+
+async function convertImageToWebp(file, quality = 0.7) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement("canvas");
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0);
+
+                canvas.toBlob(
+                    (blob) => {
+                        if (blob) {
+                            const blobReader = new FileReader();
+                            blobReader.onloadend = () => {
+                                resolve(blobReader.result);
+                            };
+                            blobReader.onerror = (error) => {
+                                reject(error);
+                            };
+                            blobReader.readAsDataURL(blob);
+                        } else {
+                            reject(new Error("Blob oluşturulamadı."));
+                        }
+                    },
+                    "image/webp",
+                    quality
+                );
+            };
+            img.onerror = (error) => {
+                reject(error);
+            };
+            img.src = event.target.result;
+        };
+        reader.onerror = (error) => {
+            reject(error);
+        };
+        reader.readAsDataURL(file);
+    });
 }
