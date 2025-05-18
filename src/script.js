@@ -10,6 +10,8 @@ const searchInput = document.getElementById("search-input");
 const clearSearch = document.getElementById("clear-search");
 const settingsPanel = document.getElementById("settings-panel");
 const openMenuBtn = document.getElementById("open-menu-btn");
+const sortOptions = document.getElementById("sort-options");
+const sortSelect = document.getElementById("sort-select");
 
 const menuBtn = document.getElementById("menu-btn");
 const searchBtn = document.getElementById("search-btn");
@@ -17,9 +19,9 @@ const sortBtn = document.getElementById("sort-btn");
 const closeSettingsBtn = document.getElementById("close-settings-btn");
 const cancelEditBtn = document.getElementById("cancel-edit-btn");
 const backToListBtn = document.getElementById("back-to-list-btn");
-const saveRecipeBtn = document.getElementById("save-recipe-btn");
 const addIngredientBtn = document.getElementById("add-ingredient-btn");
 const addStepBtn = document.getElementById("add-step-btn");
+const shareRecipe = document.getElementById("share-recipe-btn");
 const editCurrentRecipeBtn = document.getElementById(
     "edit-current-recipe-btn"
 );
@@ -41,38 +43,137 @@ let recipes = [];
 let currentRecipeId = null;
 let currentSortMethod = "date-new";
 let currentSearchQuery = "";
-let currentServings = 4;
-let detailServings = 4;
+
+const DB_NAME = "myRecipesDB";
+const DB_VERSION = 1;
+const RECIPE_STORE_NAME = "recipes";
+let db;
 
 document.addEventListener("DOMContentLoaded", () => {
     setupRippleEffects();
-    loadRecipes();
+    openDatabase();
     setupEventListeners();
     checkThemePreference();
-    checkWebViewEnvironment();
 });
 
-function checkWebViewEnvironment() {
-    const isWebView =
-        /(Android|iPhone|iPad).*Version\/[\d.]+.*(Chrome|Safari)/i.test(
-            navigator.userAgent
-        ) && !/(Chrome|Safari)/i.test(navigator.userAgent);
+function openDatabase() {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    if (isWebView) {
-        console.log(
-            "WebView ortamında çalışıyor - localStorage etkin olmalı"
-        );
-        try {
-            localStorage.setItem("test", "test");
-            localStorage.removeItem("test");
-        } catch (e) {
-            console.error("localStorage kullanılamıyor:", e);
-            showNotification(
-                "Tarifler kaydedilemiyor - localStorage erişimi yok",
-                "error"
-            );
+    request.onerror = (event) => {
+        showNotification("Veritabanı açılamadı", "error");
+    };
+
+    request.onsuccess = (event) => {
+        db = event.target.result;
+        loadRecipesFromDB();
+    };
+
+    request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains(RECIPE_STORE_NAME)) {
+            db.createObjectStore(RECIPE_STORE_NAME, {
+                keyPath: "id",
+            });
         }
+    };
+}
+
+async function saveRecipesToDB() {
+    if (!db) {
+        showNotification("Veritabanı bağlantısı yok!", "error");
+        return;
     }
+
+    const tx = db.transaction(RECIPE_STORE_NAME, "readwrite");
+    const store = tx.objectStore(RECIPE_STORE_NAME);
+
+    try {
+        await clearObjectStore(store);
+
+        const compressedRecipes = compressData(JSON.stringify(recipes));
+        const request = store.put({
+            id: "recipes",
+            data: compressedRecipes,
+        });
+
+        request.onsuccess = () => {
+            updateEmptyState();
+        };
+
+        request.onerror = (event) => {
+            showNotification("Tarifler kaydedilirken hata oluştu", "error");
+        };
+
+        tx.oncomplete = () => {
+            console.log("✓");
+        };
+
+        tx.onerror = (event) => {
+            showNotification("Tarifler kaydedilirken hata oluştu", "error");
+        };
+    } catch (error) {
+        showNotification("Tarifler kaydedilirken bir hata oluştu", "error");
+    }
+}
+
+async function loadRecipesFromDB() {
+    if (!db) {
+        showNotification("Veritabanı bağlantısı yok!", "error");
+        return;
+    }
+
+    const tx = db.transaction(RECIPE_STORE_NAME, "readonly");
+    const store = tx.objectStore(RECIPE_STORE_NAME);
+    const request = store.get("recipes");
+
+    request.onsuccess = async (event) => {
+        const result = event.target.result;
+
+        if (result) {
+            try {
+                const decompressedData = decompressData(result.data);
+                recipes = JSON.parse(decompressedData);
+                sortRecipes(currentSortMethod);
+                renderRecipes();
+            } catch (error) {
+                showNotification("Tarifler yüklenirken bir hata oluştu", "error");
+                recipes = [];
+                renderRecipes();
+            }
+        } else {
+            recipes = [];
+            renderRecipes();
+        }
+        updateEmptyState();
+    };
+
+    request.onerror = (event) => {
+        showNotification("Tarifler yüklenirken hata oluştu", "error");
+        recipes = [];
+        renderRecipes();
+    };
+}
+
+function clearObjectStore(store) {
+    return new Promise((resolve, reject) => {
+        const clearRequest = store.clear();
+
+        clearRequest.onsuccess = () => {
+            resolve();
+        };
+
+        clearRequest.onerror = (event) => {
+            reject(event.target.error);
+        };
+    });
+}
+
+function compressData(data) {
+    return LZString.compress(data);
+}
+
+function decompressData(compressedData) {
+    return LZString.decompress(compressedData);
 }
 
 function setupRippleEffects() {
@@ -96,34 +197,8 @@ function setupRippleEffects() {
     });
 }
 
-function loadRecipes() {
-    try {
-        const savedRecipes = localStorage.getItem("recipes");
-        if (savedRecipes) {
-            recipes = JSON.parse(savedRecipes);
-            sortRecipes(currentSortMethod);
-            renderRecipes();
-        } else {
-            recipes = [];
-            renderRecipes();
-        }
-        updateEmptyState();
-    } catch (e) {
-        console.error("Tarifler yüklenirken hata:", e);
-        showNotification("Tarifler yüklenirken hata oluştu", "error");
-        recipes = [];
-        renderRecipes();
-    }
-}
-
 function saveRecipes() {
-    try {
-        localStorage.setItem("recipes", JSON.stringify(recipes));
-        updateEmptyState();
-    } catch (e) {
-        console.error("Tarifler kaydedilirken hata:", e);
-        showNotification("Tarifler kaydedilirken hata oluştu", "error");
-    }
+    saveRecipesToDB();
 }
 
 function sortRecipes(method) {
@@ -136,13 +211,13 @@ function sortRecipes(method) {
             recipes.sort((a, b) => b.name.localeCompare(a.name));
             break;
         case "date-new":
-            recipes.sort((a, b) => parseInt(b.id) - parseInt(a.id));
+            recipes.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
             break;
         case "date-old":
-            recipes.sort((a, b) => parseInt(a.id) - parseInt(b.id));
+            recipes.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
             break;
         default:
-            recipes.sort((a, b) => parseInt(b.id) - parseInt(a.id));
+            recipes.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }
 }
 
@@ -168,27 +243,23 @@ function renderRecipes() {
             (recipe) =>
                 recipe.name.toLowerCase().includes(currentSearchQuery) ||
                 (recipe.description &&
-                    recipe.description
-                        .toLowerCase()
-                        .includes(currentSearchQuery)) ||
+                    recipe.description.toLowerCase().includes(currentSearchQuery)) ||
                 recipe.ingredients.some((ing) =>
                     ing.toLowerCase().includes(currentSearchQuery)
                 ) ||
-                recipe.steps.some((step) =>
-                    step.toLowerCase().includes(currentSearchQuery)
-                )
+                recipe.steps.some((step) => step.toLowerCase().includes(currentSearchQuery))
         );
 
         if (filteredRecipes.length === 0) {
             recipesContainer.innerHTML = `
-                        <div class="empty-state-container">
-                            <div class="empty-state-icon">
-                                <i class="fas fa-search"></i>
-                            </div>
-                            <h3 class="empty-state-title">Tarif bulunamadı</h3>
-                            <p class="empty-state-subtitle">Farklı bir arama terimi deneyin</p>
-                        </div>
-                    `;
+                                    <div class="empty-state-container">
+                                        <div class="empty-state-icon">
+                                            <i class="fas fa-search"></i>
+                                        </div>
+                                        <h3 class="empty-state-title">Tarif bulunamadı</h3>
+                                        <p class="empty-state-subtitle">Farklı bir arama terimi deneyin</p>
+                                    </div>
+                                `;
             return;
         }
     }
@@ -200,20 +271,21 @@ function renderRecipes() {
         recipeCard.classList.add("fade-in");
 
         recipeCard.innerHTML = `
-                    <img src="${recipe.image ||
+                                <img src="${recipe.image ||
             "https://xmeroriginals.github.io/myrecipes/assets/nopic.png"
-            }" 
-                         alt="${recipe.name}">
-                    <div class="recipe-card-mobile-content">
-                        <h3 class="recipe-card-mobile-title">${recipe.name}</h3>
-                        <p class="recipe-card-mobile-desc">${recipe.description || "Açıklama yok"
+            }"
+                                     alt="${recipe.name}">
+                                <div class="recipe-card-mobile-content">
+                                    <h3 class="recipe-card-mobile-title">${recipe.name
+            }</h3>
+                                    <p class="recipe-card-mobile-desc">${recipe.description || "Açıklama yok"
             }</p>
-                        <div class="recipe-card-mobile-meta">
-                            <span><i class="fas fa-list-ul"></i> ${recipe.ingredients.length
+                                    <div class="recipe-card-mobile-meta">
+                                        <span><i class="fas fa-list-ul"></i> ${recipe.ingredients.length
             } malzeme</span>
-                        </div>
-                    </div>
-                `;
+                                    </div>
+                                </div>
+                            `;
 
         recipeCard.addEventListener("click", () => viewRecipe(recipe.id));
         recipesContainer.appendChild(recipeCard);
@@ -225,26 +297,22 @@ function viewRecipe(id) {
     if (!recipe) return;
 
     currentRecipeId = id;
-    detailServings = recipe.servings || 4;
 
     document.getElementById("detail-recipe-name").textContent = recipe.name;
     document.getElementById("detail-recipe-description").textContent =
         recipe.description || "";
     document.getElementById("detail-recipe-image").src =
-        recipe.image ||
-        "https://xmeroriginals.github.io/myrecipes/assets/nopic.png";
+        recipe.image || "https://xmeroriginals.github.io/myrecipes/assets/nopic.png";
 
-    const ingredientsList = document.getElementById(
-        "detail-ingredients-list"
-    );
+    const ingredientsList = document.getElementById("detail-ingredients-list");
     ingredientsList.innerHTML = "";
     recipe.ingredients.forEach((ingredient) => {
         const li = document.createElement("li");
         li.className = "flex items-start";
         li.innerHTML = `
-                    <span class="text-accent mr-3 mt-1">•</span>
-                    <span>${ingredient}</span>
-                `;
+                                <span class="text-accent mr-3 mt-1">•</span>
+                                <span>${ingredient}</span>
+                            `;
         ingredientsList.appendChild(li);
     });
 
@@ -254,10 +322,10 @@ function viewRecipe(id) {
         const li = document.createElement("li");
         li.className = "flex items-start";
         li.innerHTML = `
-                    <span class="bg-[var(--accent)] text-white rounded-full w-6 h-6 flex items-center justify-center mt-1 mr-3 text-sm">${index + 1
+                                <span class="bg-[var(--accent)] text-white rounded-full w-6 h-6 flex items-center justify-center mt-1 mr-3 text-sm">${index + 1
             }</span>
-                    <span>${step}</span>
-                `;
+                                <span>${step}</span>
+                            `;
         stepsList.appendChild(li);
     });
 
@@ -272,16 +340,13 @@ function showEditForm(recipe = null) {
     document.getElementById("steps-container").innerHTML = "";
 
     if (recipe) {
-        document.getElementById("edit-recipe-title").textContent =
-            "Tarifi Düzenle";
+        document.getElementById("edit-recipe-title").textContent = "Tarifi Düzenle";
         document.getElementById("recipe-id").value = recipe.id;
         document.getElementById("recipe-name").value = recipe.name;
         document.getElementById("recipe-description").value =
             recipe.description || "";
         document.getElementById("recipe-preview").src =
-            recipe.image ||
-            "https://xmeroriginals.github.io/myrecipes/assets/nopic.png";
-        currentServings = recipe.servings || 4;
+            recipe.image || "https://xmeroriginals.github.io/myrecipes/assets/nopic.png";
 
         recipe.ingredients.forEach((ingredient) => {
             addIngredientField(ingredient);
@@ -293,11 +358,9 @@ function showEditForm(recipe = null) {
 
         currentRecipeId = recipe.id;
     } else {
-        document.getElementById("edit-recipe-title").textContent =
-            "Yeni Tarif Ekle";
+        document.getElementById("edit-recipe-title").textContent = "Yeni Tarif Ekle";
         document.getElementById("recipe-preview").src =
             "https://xmeroriginals.github.io/myrecipes/assets/nopic.png";
-        currentServings = 4;
         addIngredientField();
         addStepField();
         currentRecipeId = null;
@@ -314,12 +377,12 @@ function addIngredientField(value = "") {
     const div = document.createElement("div");
     div.className = "ingredient-item flex items-center";
     div.innerHTML = `
-                <input type="text" placeholder="Malzeme" value="${value}"
-                       class="flex-1 p-3 rounded-lg modern-input">
-                <button type="button" class="delete-ingredient-btn ml-2 text-red-500 p-2 ripple">
-                    <i class="fas fa-times"></i>
-                </button>
-            `;
+                            <input type="text" placeholder="Malzeme" value="${value}"
+                                   class="flex-1 p-3 rounded-lg modern-input">
+                            <button type="button" class="delete-ingredient-btn ml-2 text-red-500 p-2 ripple">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        `;
     container.appendChild(div);
 
     const deleteBtn = div.querySelector(".delete-ingredient-btn");
@@ -345,13 +408,13 @@ function addStepField(value = "") {
     const stepNumber = container.children.length + 1;
 
     div.innerHTML = `
-                <span class="bg-[var(--accent)] text-white rounded-full w-6 h-6 flex items-center justify-center mt-1 mr-3 text-sm">${stepNumber}</span>
-                <textarea placeholder="Adım açıklaması" rows="2"
-                          class="flex-1 p-3 rounded-lg modern-input mt-1">${value}</textarea>
-                <button type="button" class="delete-step-btn ml-2 text-red-500 p-2 mt-3 ripple">
-                    <i class="fas fa-times"></i>
-                </button>
-            `;
+                            <span class="bg-[var(--accent)] text-white rounded-full w-6 h-6 flex items-center justify-center mt-1 mr-3 text-sm">${stepNumber}</span>
+                            <textarea placeholder="Adım açıklaması" rows="2"
+                                     class="flex-1 p-3 rounded-lg modern-input mt-1">${value}</textarea>
+                            <button type="button" class="delete-step-btn ml-2 text-red-500 p-2 mt-3 ripple">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        `;
     container.appendChild(div);
 
     const deleteBtn = div.querySelector(".delete-step-btn");
@@ -375,15 +438,14 @@ function updateStepNumbers() {
     });
 }
 
-function saveRecipe() {
-    const id =
-        document.getElementById("recipe-id").value || Date.now().toString();
+async function saveRecipe() {
+    let id = document.getElementById("recipe-id").value;
     const name = document.getElementById("recipe-name").value.trim();
     const description = document
         .getElementById("recipe-description")
         .value.trim();
     const image = document.getElementById("recipe-preview").src;
-    const servings = currentServings;
+    const date = Date.now();
 
     if (!name) {
         showNotification("Lütfen bir tarif adı girin", "warning");
@@ -413,30 +475,38 @@ function saveRecipe() {
         return;
     }
 
+    if (!id) {
+        id = date.toString();
+    }
+
     const recipe = {
         id,
         name,
         description,
-        image: image.includes("unsplash.com") ? "" : image,
+        image: image,
         ingredients,
         steps,
-        servings,
-        createdAt: new Date().toISOString(),
+        date: new Date().toISOString(),
     };
 
-    const existingIndex = recipes.findIndex((r) => r.id === id);
-    if (existingIndex >= 0) {
-        recipes[existingIndex] = recipe;
-    } else {
-        recipes.unshift(recipe);
+    try {
+
+        const existingIndex = recipes.findIndex((r) => r.id === id);
+        if (existingIndex >= 0) {
+            recipes[existingIndex] = recipe;
+        } else {
+            recipes.unshift(recipe);
+        }
+
+        sortRecipes(currentSortMethod);
+        await saveRecipesToDB();
+        renderRecipes();
+        showNotification("Tarif başarıyla kaydedildi", "success");
+        backToList();
+
+    } catch (error) {
+        showNotification("Tarif kaydedilirken bir hata oluştu", "error");
     }
-
-    sortRecipes(currentSortMethod);
-    saveRecipes();
-    renderRecipes();
-    showNotification("Tarif başarıyla kaydedildi", "success");
-
-    backToList();
 }
 
 function deleteRecipe(id) {
@@ -460,10 +530,18 @@ function resetAllRecipes() {
 
 function exportRecipes() {
     const data = JSON.stringify(recipes, null, 2);
-    window.NativeInterface.saveDataToFile(
-        "Modern-Tarifler-yedek.json",
-        data
-    );
+    const blob = new Blob([data], {
+        type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "Modern-Tarifler-yedek.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
 function importRecipes(file) {
@@ -484,7 +562,6 @@ function importRecipes(file) {
                 showNotification("Geçersiz tarif dosyası", "error");
             }
         } catch (error) {
-            console.error("Tarifler içe aktarılırken hata:", error);
             showNotification("Tarif dosyası okunurken hata oluştu", "error");
         }
     };
@@ -495,9 +572,9 @@ function importRecipes(file) {
 }
 
 function showNotification(message, type = "info") {
-
     const existing = document.querySelector(".notification");
     if (existing) existing.remove();
+
     const notification = document.createElement("div");
     notification.className = `notification ${type}`;
 
@@ -520,7 +597,7 @@ function showNotification(message, type = "info") {
     document.body.appendChild(notification);
 
     setTimeout(() => {
-        notification.style.opacity = "0";
+        notification.classList.add("hide");
         setTimeout(() => {
             notification.remove();
         }, 300);
@@ -556,9 +633,7 @@ function checkThemePreference() {
 
 function applyTheme(theme) {
     if (theme === "system") {
-        const prefersDark = window.matchMedia(
-            "(prefers-color-scheme: dark)"
-        ).matches;
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
         document.documentElement.classList.toggle("dark", prefersDark);
         document.documentElement.classList.toggle("light", !prefersDark);
     } else {
@@ -573,22 +648,25 @@ function toggleSettingsPanel() {
 }
 
 function setupEventListeners() {
-
     menuBtn.addEventListener("click", toggleSettingsPanel);
     openMenuBtn.addEventListener("click", toggleSettingsPanel);
 
     searchBtn.addEventListener("click", () => {
+        sortOptions.classList.add("hidden");
         searchContainer.classList.toggle("hidden");
         if (!searchContainer.classList.contains("hidden")) {
             searchInput.focus();
         }
     });
     sortBtn.addEventListener("click", () => {
+        searchContainer.classList.add("hidden");
+        sortOptions.classList.toggle("hidden");
+    });
 
-        showNotification(
-            "Sıralama özelliği henüz geliştirme aşamasında.",
-            "info"
-        );
+    sortSelect.addEventListener("change", () => {
+        currentSortMethod = sortSelect.value;
+        sortRecipes(currentSortMethod);
+        renderRecipes();
     });
 
     closeSettingsBtn.addEventListener("click", toggleSettingsPanel);
@@ -622,8 +700,7 @@ function setupEventListeners() {
             if (file) {
                 const reader = new FileReader();
                 reader.onload = (event) => {
-                    document.getElementById("recipe-preview").src =
-                        event.target.result;
+                    document.getElementById("recipe-preview").src = event.target.result;
                 };
                 reader.readAsDataURL(file);
             }
@@ -697,6 +774,15 @@ function setupEventListeners() {
             saveRecipe();
         }
     });
+
+    shareRecipe.addEventListener("click", () => {
+        const recipe = recipes.find((r) => r.id === currentRecipeId);
+        if (recipe) {
+            shareRecipeText(recipe);
+        } else {
+            showNotification("Tarif bulunamadı", "error");
+        }
+    });
 }
 
 function getSortMethodName(method) {
@@ -734,4 +820,34 @@ function showConfirmation(title, message, callback) {
 
     confirmOk.addEventListener("click", handleConfirm);
     confirmCancel.addEventListener("click", handleCancel);
+}
+
+async function shareRecipeText(recipe) {
+    const shareText = `${recipe.name}\n\nMalzemeler\n${recipe.ingredients
+        .map((ing) => `• ${ing}`)
+        .join("\n")}\n\nHazırlanışı\n${recipe.steps
+            .map((step, index) => `${index + 1}. ${step}`)
+            .join("\n")}`;
+
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: recipe.name,
+                text: shareText,
+            });
+        } catch (error) {
+            copyToClipboard(shareText);
+        }
+    } else {
+        copyToClipboard(shareText);
+    }
+}
+
+async function copyToClipboard(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        showNotification("Tarif panoya kopyalandı", "success");
+    } catch (error) {
+        showNotification("Tarif kopyalanamadı", "error");
+    }
 }
