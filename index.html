@@ -177,7 +177,7 @@
           id="recipes-container"
           class="scroll-container flex-1 overflow-y-auto pb-4"
         ></div>
-        <div class="empty-state-container" id="empty-state">
+        <div class="empty-state-container hidden" id="empty-state">
           <div class="empty-state-icon">
             <i class="fas fa-book-open"></i>
           </div>
@@ -403,7 +403,9 @@
     </main>
 
     <div id="confirm-modal" class="modal">
-      <div class="modal-content mx-auto my-20 p-6 max-w-md ml-[max(10px,calc((100dvw-100%)/2))] mr-[max(10px,calc((100dvw-100%)/2))]">
+      <div
+        class="modal-content mx-auto my-20 p-6 max-w-md ml-[max(10px,calc((100dvw-100%)/2))] mr-[max(10px,calc((100dvw-100%)/2))]"
+      >
         <div class="text-center mb-4">
           <i class="fas fa-exclamation-circle text-4xl text-red-500 mb-3"></i>
           <h3 id="confirm-title" class="text-xl font-bold mb-2"></h3>
@@ -481,7 +483,7 @@
                 class="w-full text-left p-3 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg ripple transition-smooth flex items-center"
               >
                 <i class="fas fa-file-export text-accent mr-3"></i>
-                <span>Tüm Tarifleri Dışa Aktar</span>
+                <span>Tarifleri Dışa Aktar</span>
               </button>
               <button
                 id="import-data-btn"
