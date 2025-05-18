@@ -127,7 +127,7 @@ async function loadRecipesFromDB() {
     emptyStateTitle.textContent = "Tarifleriniz Yolda, Lütfen Bekleyiniz...";
     emptyStateSubtitle.textContent = "";
     openMenuBtnEmptyState.classList.add("hidden");
-    emptyStateIcon.classList.remove("fa-book-open");
+    emptyStateIcon.classList.remove("fa-solid fa-book");
     emptyStateIcon.classList.add("fas", "fa-spinner", "fa-spin");
     emptyState.classList.remove("hidden");
 
@@ -870,7 +870,7 @@ function resetEmptyState() {
     emptyStateSubtitle.textContent = "Menüyü açarak yeni tarif ekleyebilirsiniz";
     openMenuBtnEmptyState.classList.remove("hidden");
     emptyStateIcon.classList.remove("fas", "fa-spinner", "fa-spin");
-    emptyStateIcon.classList.add("fa-book-open");
+    emptyStateIcon.classList.add("fa-solid fa-book");
     updateEmptyState();
 }
 
