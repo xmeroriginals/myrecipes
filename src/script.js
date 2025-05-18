@@ -836,11 +836,12 @@ function showConfirmation(title, message, callback) {
 }
 
 async function shareRecipeText(recipe) {
-    const shareText = `${recipe.name}\n\nMalzemeler\n${recipe.ingredients
-        .map((ing) => `• ${ing}`)
-        .join("\n")}\n\nHazırlanışı\n${recipe.steps
-            .map((step, index) => `${index + 1}. ${step}`)
-            .join("\n")}`;
+    const shareText = `${recipe.name}
+${recipe.description ? `${recipe.description}` : ""}\n
+Malzemeler
+${recipe.ingredients.map((ing) => `• ${ing}`).join("\n")}\n
+Hazırlanışı
+${recipe.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`;
 
     if (navigator.share) {
         try {
